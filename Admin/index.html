@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.10/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    import { useState, useEffect } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import axios from 'axios';
+    // Mock components (replace with actual imports in a real project)
+    const FuturisticSidebar = () => (
+      <div className="w-64 bg-black/80 p-4 text-white">
+        <h2 className="text-xl font-bold">Sidebar</h2>
+        <ul>
+          <li className="p-2 hover:bg-cyan-500/20">Dashboard</li>
+          <li className="p-2 hover:bg-cyan-500/20">Settings</li>
+        </ul>
+      </div>
+    );
+    const SidebarProvider = ({ children }) => <div className="flex">{children}</div>;
+    const Card = ({ children, className }) => <div className={`border rounded-lg ${className}`}>{children}</div>;
+    const CardHeader = ({ children }) => <div className="p-4 border-b">{children}</div>;
+    const CardTitle = ({ children, className }) => <h3 className={`text-lg font-bold ${className}`}>{children}</h3>;
+    const CardContent = ({ children, className }) => <div className={`p-4 ${className}`}>{children}</div>;
+    const Button = ({ children, className, ...props }) => (
+      <button className={`px-4 py-2 rounded ${className}`} {...props}>{children}</button>
+    );
+    const Input = ({ className, ...props }) => (
+      <input className={`border rounded px-3 py-2 ${className}`} {...props} />
+    );
+    const Badge = ({ children, className }) => (
+      <span className={`px-2 py-1 rounded ${className}`}>{children}</span>
+    );
+    const Tabs = ({ value, onValueChange, children }) => {
+      const [activeTab, setActiveTab] = useState(value);
+      useEffect(() => setActiveTab(value), [value]);
+      return (
+        <div>
+          {React.Children.map(children, child =>
+            React.cloneElement(child, { activeTab, setActiveTab: onValueChange })
+          )}
+        </div>
+      );
+    };
+    const TabsList = ({ children, className, activeTab, setActiveTab }) => (
+      <div className={`flex ${className}`}>
+        {React.Children.map(children, child =>
+          React.cloneElement(child, { activeTab, setActiveTab })
+        )}
+      </div>
+    );
+    const TabsTrigger = ({ value, children, className, activeTab, setActiveTab }) => (
+      <button
+        className={`px-4 py-2 ${activeTab === value ? 'bg-cyan-500/20 text-cyan-400' : ''} ${className}`}
+        onClick={() => setActiveTab(value)}
+      >
+        {children}
+      </button>
+    );
+    const TabsContent = ({ value, children, activeTab }) => (
+      activeTab === value ? <div>{children}</div> : null
+    );
+    const Users = ({ className }) => <i data-lucide="users" className={className}></i>;
+    const GraduationCap = ({ className }) => <i data-lucide="graduation-cap" className={className}></i>;
+    const Building = ({ className }) => <i data-lucide="building" className={className}></i>;
+    const BookOpen = ({ className }) => <i data-lucide="book-open" className={className}></i>;
+    const TrendingUp = ({ className }) => <i data-lucide="trending-up" className={className}></i>;
+    const Check = ({ className }) => <i data-lucide="check" className={className}></i>;
+    const X = ({ className }) => <i data-lucide="x" className={className}></i>;
+    const Edit = ({ className }) => <i data-lucide="edit" className={className}></i>;
+    const Plus = ({ className }) => <i data-lucide="plus" className={className}></i>;
+    const Eye = ({ className }) => <i data-lucide="eye" className={className}></i>;
+    const BarChart3 = ({ className }) => <i data-lucide="bar-chart-3" className={className}></i>;
+
+    const mockStats = {
+      totalUsers: 15420,
+      activeMentors: 234,
+      partneredInstitutes: 89,
+      coursesAvailable: 567,
+      monthlyGrowth: 23.5,
+    };
+
+    function AdminPanel() {
+      const [selectedTab, setSelectedTab] = useState('overview');
+      const [mentors, setMentors] = useState([]);
+      const [flashcards, setFlashcards] = useState([]);
+      const [gradeStreamOptions, setGradeStreamOptions] = useState([]);
+      const [careerPaths, setCareerPaths] = useState([]);
+      const [events, setEvents] = useState([]);
+      const [formFields, setFormFields] = useState([]);
+      const [sessionBookings, setSessionBookings] = useState([]);
+      const [users, setUsers] = useState([]);
+      const [userPreferences, setUserPreferences] = useState([]);
+      const [userProfiles, setUserProfiles] = useState([]);
+      const [newMentor, setNewMentor] = useState({
+        name: '', role: '', experience: '', rating: 0, sessions: 0,
+        languages: '', specialization: '', avatar: '', price: 0, education_level: ''
+      });
+
+      useEffect(() => {
+        lucide.createIcons();
+        // Fetch data from APIs
+        axios.get('http://localhost/api/mentors.php')
+          .then(res => setMentors(res.data))
+          .catch(err => console.error('Error fetching mentors:', err));
+        axios.get('http://localhost/api/flashcards.php')
+          .then(res => setFlashcards(res.data))
+          .catch(err => console.error('Error fetching flashcards:', err));
+        axios.get('http://localhost/api/grade_stream_options.php')
+          .then(res => setGradeStreamOptions(res.data))
+          .catch(err => console.error('Error fetching grade stream options:', err));
+        axios.get('http://localhost/api/career_paths.php')
+          .then(res => setCareerPaths(res.data))
+          .catch(err => console.error('Error fetching career paths:', err));
+        axios.get('http://localhost/api/events.php')
+          .then(res => setEvents(res.data))
+          .catch(err => console.error('Error fetching events:', err));
+        axios.get('http://localhost/api/form_fields.php')
+          .then(res => setFormFields(res.data))
+          .catch(err => console.error('Error fetching form fields:', err));
+        axios.get('http://localhost/api/session_bookings.php')
+          .then(res => setSessionBookings(res.data))
+          .catch(err => console.error('Error fetching session bookings:', err));
+        axios.get('http://localhost/api/users.php')
+          .then(res => setUsers(res.data))
+          .catch(err => console.error('Error fetching users:', err));
+        axios.get('http://localhost/api/user_preferences.php')
+          .then(res => setUserPreferences(res.data))
+          .catch(err => console.error('Error fetching user preferences:', err));
+        axios.get('http://localhost/api/user_profiles.php')
+          .then(res => setUserProfiles(res.data))
+          .catch(err => console.error('Error fetching user profiles:', err));
+      }, []);
+
+      const handleApproveMentor = (id) => {
+        console.log('Approving mentor:', id);
+      };
+
+      const handleRejectMentor = (id) => {
+        console.log('Rejecting mentor:', id);
+      };
+
+      const handleAddMentor = () => {
+        axios.post('http://localhost/api/add_mentor.php', newMentor)
+          .then(res => {
+            alert(res.data.success || res.data.error);
+            if (res.data.success) {
+              setMentors([...mentors, { ...newMentor, id: Date.now() }]);
+              setNewMentor({
+                name: '', role: '', experience: '', rating: 0, sessions: 0,
+                languages: '', specialization: '', avatar: '', price: 0, education_level: ''
+              });
+            }
+          })
+          .catch(err => console.error('Error adding mentor:', err));
+      };
+
+      return (
+        <SidebarProvider>
+          <div className="min-h-screen flex w-full bg-gray-900">
+            <FuturisticSidebar />
+            <main className="flex-1 p-6 space-y-6">
+              <div className="glass-panel p-6 bg-black/30 border border-cyan-400/20 rounded-lg">
+                <h1 className="text-4xl font-bold text-white mb-4">Admin Control Center</h1>
+                <p className="text-gray-400">Manage platform operations and content</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <Card className="glass-panel border-cyan-400/20 bg-black/30">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                        <Users className="w-6 h-6 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-sm">Total Users</p>
+                        <p className="text-2xl font-bold text-white">{mockStats.totalUsers.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="glass-panel border-cyan-400/20 bg-black/30">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                        <GraduationCap className="w-6 h-6 text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-sm">Active Mentors</p>
+                        <p className="text-2xl font-bold text-white">{mockStats.activeMentors}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="glass-panel border-cyan-400/20 bg-black/30">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
+                        <Building className="w-6 h-6 text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-sm">Institutes</p>
+                        <p className="text-2xl font-bold text-white">{mockStats.partneredInstitutes}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="glass-panel border-cyan-400/20 bg-black/30">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                        <BookOpen className="w-6 h-6 text-yellow-400" />
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-sm">Courses</p>
+                        <p className="text-2xl font-bold text-white">{mockStats.coursesAvailable}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="glass-panel border-cyan-400/20 bg-black/30">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                        <TrendingUp className="w-6 h-6 text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-sm">Growth</p>
+                        <p className="text-2xl font-bold text-white">+{mockStats.monthlyGrowth}%</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="glass-panel p-6 bg-black/30 border border-cyan-400/20 rounded-lg">
+                <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+                  <TabsList className="grid w-full grid-cols-6 bg-black/20">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="mentors">Mentors</TabsTrigger>
+                    <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
+                    <TabsTrigger value="events">Events</TabsTrigger>
+                    <TabsTrigger value="users">Users</TabsTrigger>
+                    <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="overview" className="mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <Card className="glass-panel border-cyan-400/20 bg-black/30">
+                        <CardHeader>
+                          <CardTitle className="text-white">Recent Activity</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3 p-3 rounded bg-black/20">
+                              <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <Check className="w-4 h-4 text-green-400" />
+                              </div>
+                              <div>
+                                <p className="text-white text-sm">New mentor approved</p>
+                                <p className="text-gray-400 text-xs">2 hours ago</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="glass-panel border-cyan-400/20 bg-black/30">
+                        <CardHeader>
+                          <CardTitle className="text-white">Quick Actions</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 gap-3">
+                            <Button className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600">
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add Course
+                            </Button>
+                            <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add Exam
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="mentors" className="mt-6">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-bold text-white">Mentor Management</h3>
+                        <Button className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Mentor
+                        </Button>
+                      </div>
+                      <Card className="glass-panel border-cyan-400/20 bg-black/30">
+                        <CardHeader>
+                          <CardTitle className="text-white">Add New Mentor</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 gap-4">
+                            <Input
+                              placeholder="Name"
+                              value={newMentor.name}
+                              onChange={(e) => setNewMentor({ ...newMentor, name: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Role"
+                              value={newMentor.role}
+                              onChange={(e) => setNewMentor({ ...newMentor, role: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Experience"
+                              value={newMentor.experience}
+                              onChange={(e) => setNewMentor({ ...newMentor, experience: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Specialization"
+                              value={newMentor.specialization}
+                              onChange={(e) => setNewMentor({ ...newMentor, specialization: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Languages"
+                              value={newMentor.languages}
+                              onChange={(e) => setNewMentor({ ...newMentor, languages: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Price"
+                              type="number"
+                              value={newMentor.price}
+                              onChange={(e) => setNewMentor({ ...newMentor, price: parseFloat(e.target.value) })}
+                            />
+                            <Input
+                              placeholder="Education Level"
+                              value={newMentor.education_level}
+                              onChange={(e) => setNewMentor({ ...newMentor, education_level: e.target.value })}
+                            />
+                            <Button onClick={handleAddMentor} className="bg-gradient-to-r from-green-500 to-blue-500">
+                              Submit
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <div className="space-y-4">
+                        {mentors.map((mentor) => (
+                          <Card key={mentor.id} className="glass-panel border-cyan-400/20 bg-black/30">
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-bold text-white text-lg">{mentor.name}</h4>
+                                  <p className="text-cyan-400">{mentor.specialization}</p>
+                                  <p className="text-gray-400 text-sm">{mentor.experience} experience</p>
+                                  <p className="text-gray-400 text-sm">{mentor.languages}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-500 hover:bg-green-600"
+                                    onClick={() => handleApproveMentor(mentor.id)}
+                                  >
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-red-400/30 text-red-400 hover:bg-red-400/20"
+                                    onClick={() => handleRejectMentor(mentor.id)}
+                                  >
+                                    <X className="w-4 h-4 mr-2" />
+                                    Reject
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="flashcards" className="mt-6">
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-bold text-white">Flashcards</h3>
+                      {flashcards.map((flashcard) => (
+                        <Card key={flashcard.id} className="glass-panel border-cyan-400/20 bg-black/30">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-bold text-white text-lg">{flashcard.title}</h4>
+                                <p className="text-cyan-400">{flashcard.category}</p>
+                                <p className="text-gray-400 text-sm">Duration: {flashcard.duration}</p>
+                                <p className="text-gray-400 text-sm">Cost: ${flashcard.cost}</p>
+                              </div>
+                              <Button size="sm" variant="outline" className="border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/20">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="events" className="mt-6">
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-bold text-white">Events</h3>
+                      {events.map((event) => (
+                        <Card key={event.id} className="glass-panel border-cyan-400/20 bg-black/30">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-bold text-white text-lg">{event.title}</h4>
+                                <p className="text-cyan-400">{event.type}</p>
+                                <p className="text-gray-400 text-sm">Date: {event.date} {event.time}</p>
+                                <p className="text-gray-400 text-sm">Mentor: {event.mentor}</p>
+                              </div>
+                              <Badge className={event.status === 'confirmed' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'}>
+                                {event.status}
+                              </Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="users" className="mt-6">
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-bold text-white">Users</h3>
+                      {users.map((user) => (
+                        <Card key={user.id} className="glass-panel border-cyan-400/20 bg-black/30">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-bold text-white text-lg">{user.first_name} {user.last_name}</h4>
+                                <p className="text-cyan-400">{user.email}</p>
+                                <p className="text-gray-400 text-sm">Role: {user.role}</p>
+                                <p className="text-gray-400 text-sm">Phone: {user.phone_number}</p>
+                              </div>
+                              <Button size="sm" variant="outline" className="border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/20">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="analytics" className="mt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card className="glass-panel border-cyan-400/20 bg-black/30">
+                        <CardContent className="p-6">
+                          <h4 className="font-bold text-white">User Profiles</h4>
+                          {userProfiles.map((profile) => (
+                            <div key={profile.id} className="mt-2">
+                              <p className="text-white text-sm">User ID: {profile.user_id}</p>
+                              <p className="text-gray-400 text-sm">Education: {profile.education_level}</p>
+                              <p className="text-gray-400 text-sm">Interests: {profile.interests}</p>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                      <Card className="glass-panel border-cyan-400/20 bg-black/30">
+                        <CardContent className="p-6">
+                          <h4 className="font-bold text-white">Session Bookings</h4>
+                          {sessionBookings.map((booking) => (
+                            <div key={booking.id} className="mt-2">
+                              <p className="text-white text-sm">Mentor ID: {booking.mentor_id}</p>
+                              <p className="text-gray-400 text-sm">Time: {booking.session_time}</p>
+                              <p className="text-gray-400 text-sm">Status: {booking.status}</p>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </main>
+          </div>
+        </SidebarProvider>
+      );
+    }
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<AdminPanel />);
+  </script>
+</body>
+</html>
